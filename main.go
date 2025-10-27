@@ -43,7 +43,7 @@ func printErr(err error) {
 
 func main() {
 	if os.Geteuid() != 0 {
-		printErrString("Error: %s must be run as root!", os.Args[0])
+		printErrString("Error: %s must be run as root!\n", os.Args[0])
 	}
 	parseFlags()
 
@@ -65,7 +65,7 @@ func main() {
 		<-sigs
 		fmt.Println("interrupt recieved, stopping scanning early.")
 		done = true
-		time.AfterFunc(5*time.Second, func() { printErrString("error: execution did not stop withing 5 seconds of SIGINT recieved") })
+		time.AfterFunc(5*time.Second, func() { printErrString("error: execution did not stop withing 5 seconds of SIGINT recieved\n") })
 	}()
 
 	resChan = make(chan string, cap(ips))
@@ -304,13 +304,12 @@ func writeFile() {
 
 	username := os.Getenv("SUDO_USER")
 	if username == "" {
-		printErrString("Error: Could not get SUDO_USER")
+		printErrString("Error: Could not get SUDO_USER\n")
 	}
 
 	usr, err := user.Lookup(username)
 	if err != nil {
-		fmt.Printf("could not find user \"%s\": %v", username, err)
-		return
+		printErrString("could not find user \"%s\": %v\n", username, err)
 	}
 	uid, _ := strconv.Atoi(usr.Uid)
 	gid, _ := strconv.Atoi(usr.Gid)
