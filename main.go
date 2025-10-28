@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"os/user"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -21,6 +22,7 @@ import (
 var verbose bool
 var outFile string
 var threadCount int
+var count int
 
 // global statistics variables
 var startTime time.Time
@@ -42,10 +44,11 @@ func printErr(err error) {
 }
 
 func main() {
+	parseFlags()
+
 	if os.Geteuid() != 0 {
 		printErrString("Error: %s must be run as root!\n", os.Args[0])
 	}
-	parseFlags()
 
 	scanned = 0
 	done = false
@@ -79,14 +82,14 @@ func main() {
 		if len(ips) == 0 {
 			break
 		}
-		go runPings(ips, responses, idles, verbose)
+		go runPings(ips, responses, idles)
 		msg := fmt.Sprintf("%d/%d", i+1, threadCount)
 		if i != threadCount {
 			msg += strings.Repeat("\b", len(msg))
 		}
 		fmt.Print(msg)
 	}
-	fmt.Println("\nAll goroutines running.\n")
+	fmt.Println("\nAll goroutines running.")
 
 	if !verbose {
 		time.AfterFunc(5*time.Second, printUpdate)
@@ -131,7 +134,7 @@ func main() {
 	}
 }
 
-func runPings(ips chan string, responses chan string, idles chan string, verbose bool) {
+func runPings(ips chan string, responses chan string, idles chan string) {
 	for !done {
 		addrString := <-ips
 
@@ -161,7 +164,7 @@ func runPings(ips chan string, responses chan string, idles chan string, verbose
 
 func parseRange() chan string {
 	if !flag.Parsed() {
-		flag.Parse()
+		parseFlags()
 	}
 	rangeStr := flag.Arg(0)
 	ranges := strings.Split(rangeStr, ".")
@@ -201,14 +204,16 @@ func parseRange() chan string {
 	d1 := rangeList[6]
 	d2 := rangeList[7]
 	dRange := d2 - d1 + 1
-	total = aRange * bRange * cRange * dRange
+	total = aRange * bRange * cRange * dRange * count
 	ips := make(chan string, total)
 	for a := a1; a <= a2; a++ {
 		for b := b1; b <= b2; b++ {
 			for c := c1; c <= c2; c++ {
 				for d := d1; d <= d2; d++ {
 					addrString := fmt.Sprintf("%d.%d.%d.%d", a, b, c, d)
-					ips <- addrString
+					for i := 0; i < count; i++ {
+						ips <- addrString
+					}
 				}
 			}
 		}
@@ -229,6 +234,7 @@ func parseFlags() {
 	flag.BoolVar(&verbose, "v", false, "Usage: -v\nEnable verbose (print message for every IP scanned)")
 	flag.StringVar(&outFile, "o", "", "Usage: -o [filename]\nSpecify file to write newline-separated list of IPs that responded to pings (default do not write to file)")
 	flag.IntVar(&threadCount, "t", 8192, "Usage: -t [threadcount]\nspecify how many goroutines to use to ping IPs simultaneously (NOTE: threadcount must be >0)")
+	flag.IntVar(&count, "c", 1, "Usage: -c [count]\nspecify how many times to ping every IP address")
 	flag.BoolFunc("help", "alias for -h", printHelp)
 	flag.BoolFunc("h", "Print this message", printHelp)
 	flag.Parse()
@@ -290,10 +296,21 @@ func saveToFile() {
 }
 
 func writeFile() {
-	csvString := ""
+
+	trimmed := make([]string, 0)
 
 	for len(resChan) > 0 {
-		csvString += <-resChan + "\n"
+		ip := <-resChan
+		if slices.Contains(trimmed, ip) {
+			continue
+		}
+		trimmed = append(trimmed, ip)
+	}
+
+	csvString := ""
+
+	for _, each := range trimmed {
+		csvString += each + "\n"
 	}
 
 	bytes := []byte(csvString)
