@@ -1,4 +1,4 @@
-module pingr
+module github.com/junglehornet/go-pingr
 
 go 1.25.3
 
