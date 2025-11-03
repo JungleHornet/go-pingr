@@ -237,10 +237,15 @@ func parseFlags() {
 	flag.IntVar(&count, "c", 1, "Usage: -c [count]\nspecify how many times to ping every IP address")
 	flag.BoolFunc("help", "alias for -h", printHelp)
 	flag.BoolFunc("h", "Print this message", printHelp)
+
 	flag.Parse()
 	if threadCount <= 0 {
 		fmt.Println("threadCount is not greater than 0, defaulting to 8192")
 		threadCount = 8192
+	}
+	if slices.Contains(flag.Args(), "help") {
+		printHelp("")
+		return
 	}
 }
 
