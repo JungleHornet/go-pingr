@@ -20,3 +20,8 @@ Port range should be in the following format: 0-255.0-255.0-255.0-255
   -v    Usage: -v
         Enable verbose (print message for every IP scanned)
 ```
+
+### Building
+1. `git clone` the repository or download the archive from github, extract the archive, and rename the extracted directory to `pingr`.
+2. Once inside the main directory of the project, run `go build .` with go version 1.25.3.
+3. Then, the generated binary is ready! It can be dropped directly inside your `/bin` or used as is.
